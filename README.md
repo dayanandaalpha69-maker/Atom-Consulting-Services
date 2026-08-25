@@ -5,7 +5,7 @@ This version replaces local lead/document storage with a free-tier-oriented clou
 **Streamlit Community Cloud**
 → **Supabase Free: PostgreSQL + private Storage**
 → **Resend Free: transactional email**
-→ **dayananda_9@proton.com**
+→ **atomconsultingservices@proton.me**
 
 ## Why this architecture?
 
@@ -68,7 +68,7 @@ Copy `.streamlit/secrets.toml.example` into the Streamlit Cloud Secrets panel.
 Example:
 
 ```toml
-CONTACT_TO_EMAIL = "dayananda_9@proton.com"
+CONTACT_TO_EMAIL = "atomconsultingservices@proton.me"
 
 SUPABASE_URL = "https://YOUR_PROJECT.supabase.co"
 SUPABASE_SERVICE_ROLE_KEY = "YOUR_SUPABASE_SERVICE_ROLE_KEY"

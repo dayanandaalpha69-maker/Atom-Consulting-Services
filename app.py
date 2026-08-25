@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 
 import streamlit as st
 from supabase import create_client, Client
+from streamlit.errors import StreamlitSecretNotFoundError
 
 st.set_page_config(
     page_title="Atom Consulting Services | Strategy. Transformation. Impact.",
@@ -15,16 +16,23 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-TO_EMAIL = st.secrets.get("CONTACT_TO_EMAIL", "dayananda_9@proton.com")
-BUCKET = st.secrets.get("SUPABASE_BUCKET", "client-documents")
+def get_secret(name, default=""):
+    try:
+        return st.secrets.get(name, default)
+    except StreamlitSecretNotFoundError:
+        return default
+
+
+TO_EMAIL = get_secret("CONTACT_TO_EMAIL", "atomconsultingservices@proton.me")
+BUCKET = get_secret("SUPABASE_BUCKET", "client-documents")
 MAX_FILE_MB = 15
 MAX_FILES = 5
 MAX_TOTAL_UPLOAD_MB = 25
 ALLOWED_TYPES = ["pdf", "doc", "docx"]
 
 def get_supabase() -> Client:
-    url = st.secrets.get("SUPABASE_URL", "")
-    key = st.secrets.get("SUPABASE_SERVICE_ROLE_KEY", "")
+    url = get_secret("SUPABASE_URL")
+    key = get_secret("SUPABASE_SERVICE_ROLE_KEY")
     if not url or not key:
         raise RuntimeError("Supabase secrets are not configured.")
     return create_client(url, key)
@@ -92,8 +100,8 @@ def create_lead_and_uploads(name, email, company, service, requirements, files):
     return lead_id, docs
 
 def send_resend_email(name, email, company, service, requirements, lead_id, docs):
-    api_key = st.secrets.get("RESEND_API_KEY", "")
-    from_email = st.secrets.get("RESEND_FROM_EMAIL", "")
+    api_key = get_secret("RESEND_API_KEY")
+    from_email = get_secret("RESEND_FROM_EMAIL")
     if not api_key or not from_email:
         return False, "Resend is not configured. The lead was saved to Supabase."
 
