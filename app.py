@@ -157,11 +157,17 @@ def send_resend_email(name, email, company, service, requirements, lead_id, docs
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap');
-html,body,[class*="css"]{font-family:'DM Sans',sans-serif;color:#102033}
-.stApp{background:#fff}.block-container{max-width:1240px;padding-top:1rem;padding-bottom:0}
+html,body,[class*="css"]{font-family:'DM Sans',sans-serif;color:#102033;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;scroll-behavior:smooth;scroll-padding-top:90px}
+.stApp{background:#fff}.block-container{max-width:1240px;padding-top:0.5rem;padding-bottom:0}
 section[data-testid="stSidebar"]{display:none}
-.brand{font-family:'Manrope';font-size:1.35rem;font-weight:800;letter-spacing:-.04em;color:#071A2F}
-.brand span{color:#0D5CFF}.navpill{display:inline-block;padding:8px 13px;margin-left:5px;color:#526276;text-decoration:none;font-size:.92rem;font-weight:600}
+header[data-testid="stHeader"]{display:none !important}
+[id]{scroll-margin-top:90px}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;padding:10px 14px 12px;margin:0 -14px 8px;background:#fff;border-bottom:1px solid rgba(15,36,58,.06)}
+.brand{display:flex;align-items:baseline;flex-wrap:wrap;gap:0.22rem;font-family:'Manrope';font-size:clamp(1.08rem,1.7vw,1.55rem);font-weight:800;letter-spacing:-.06em;line-height:1.1;color:#071A2F;white-space:normal;max-width:min(100%, 680px)}
+.brand span{display:inline-block;color:#0D5CFF}
+.topnav{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.navpill{display:inline-block;padding:10px 14px;border-radius:999px;color:#526276;text-decoration:none;font-size:.92rem;font-weight:700;line-height:1.2;transition:all .2s ease}
+.navpill:hover{background:#EEF4FF;color:#0D5CFF}
 .hero{min-height:555px;border-radius:28px;overflow:hidden;margin-top:14px;margin-bottom:70px;position:relative;background:radial-gradient(circle at 85% 20%,rgba(19,184,200,.30),transparent 27%),radial-gradient(circle at 74% 75%,rgba(13,92,255,.35),transparent 35%),linear-gradient(118deg,#071A2F 0%,#0B2948 56%,#0D5CFF 150%)}
 .hero-grid{min-height:555px;padding:70px 68px;display:flex;flex-direction:column;justify-content:center;background-image:linear-gradient(rgba(255,255,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.045) 1px,transparent 1px);background-size:42px 42px}
 .eyebrow,.section-label{color:#77E1E8;text-transform:uppercase;letter-spacing:.18em;font-size:.76rem;font-weight:800}
@@ -180,14 +186,15 @@ h2{font-family:'Manrope';color:#071A2F;font-size:clamp(2rem,4vw,3.25rem);line-he
 .contact{background:linear-gradient(120deg,#0D5CFF,#13B8C8);border-radius:28px;padding:54px;color:white;margin:70px 0 35px}.contact h2{color:white}.contact p{color:#E7FAFC}
 .footer{border-top:1px solid #E2E9F1;padding:30px 0 45px;color:#718096;font-size:.86rem}.footer strong{color:#071A2F}
 div.stButton>button{border-radius:999px;border:0;background:#0D5CFF;color:white;font-weight:800}
+@media (max-width: 720px){.topbar{align-items:flex-start;flex-direction:column}.topnav{justify-content:flex-start}.hero-grid{padding:48px 28px}.cta{display:inline-flex;align-items:center;justify-content:center;margin:0 10px 12px 0}.slide-note{right:24px;bottom:18px}}
 </style>
 """, unsafe_allow_html=True)
 
 # Header
 st.markdown("""
-<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 4px 6px">
+<div class="topbar">
 <div class="brand">ATOM <span>CONSULTING SERVICES</span></div>
-<div><a class="navpill" href="#services">Services</a><a class="navpill" href="#about">About</a><a class="navpill" href="#approach">Approach</a><a class="navpill" href="#contact">Contact</a></div>
+<div class="topnav"><a class="navpill" href="#services">Services</a><a class="navpill" href="#about">About</a><a class="navpill" href="#approach">Approach</a><a class="navpill" href="#contact">Contact</a></div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -243,7 +250,7 @@ left,right=st.columns([1,1],gap="large")
 with left:
     st.markdown(f"""<div class="contact"><div class="section-label">Start a conversation</div><h2>Have a business challenge worth solving?</h2>
 <p>Submit your service request and attach your case study, RFP, business requirements, user requirements or supporting documents.</p>
-<p><strong>PDF, DOC and DOCX</strong><br>Maximum 15 MB per file, 5 files and 25 MB total<br>Secure storage: Supabase<br>Notification: {TO_EMAIL}</p></div>""",unsafe_allow_html=True)
+<p><strong>PDF, DOC and DOCX</strong><br>Maximum 15 MB per file, 5 files and 25 MB total</p></div>""",unsafe_allow_html=True)
 
 with right:
     st.markdown("### Contact us")
