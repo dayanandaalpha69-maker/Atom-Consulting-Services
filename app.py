@@ -1,5 +1,6 @@
 
 import html
+import hmac
 import re
 import smtplib
 import uuid
@@ -102,7 +103,10 @@ def create_lead_and_uploads(name, email, company, service, requirements, files):
 
 def send_smtp_email(name, email, company, service, requirements, lead_id, docs):
     smtp_host = get_secret("SMTP_HOST")
-    smtp_port = int(get_secret("SMTP_PORT", 587))
+    try:
+        smtp_port = int(get_secret("SMTP_PORT", 587))
+    except (TypeError, ValueError):
+        return False, "SMTP is not configured correctly. The lead was saved to Supabase."
     smtp_username = get_secret("SMTP_USERNAME")
     smtp_password = get_secret("SMTP_PASSWORD")
     from_email = get_secret("SMTP_FROM_EMAIL", smtp_username)
@@ -144,7 +148,154 @@ def send_smtp_email(name, email, company, service, requirements, lead_id, docs):
             smtp.send_message(message)
         return True, "Email notification sent successfully."
     except Exception as exc:
-        return False, f"Email notification failed: {exc}"
+        print(f"Email notification failed: {exc}")
+        return False, "Email notification failed. The lead was saved to Supabase."
+
+STATUS_OPTIONS = ["New", "Contacted", "Qualified", "Proposal", "Won", "Lost", "On Hold"]
+PRIORITY_OPTIONS = ["Low", "Normal", "High", "Urgent"]
+
+def admin_login():
+    if st.session_state.get("admin_authenticated"):
+        return True
+
+    st.title("Atom Admin")
+    st.caption("Sign in to manage submitted client requests.")
+    with st.form("admin_login"):
+        username = st.text_input("Username")
+        password = st.text_input("Password", type="password")
+        submitted = st.form_submit_button("Sign in")
+        if submitted:
+            configured_username = get_secret("ADMIN_USERNAME")
+            configured_password = get_secret("ADMIN_PASSWORD")
+            if (configured_username and configured_password
+                    and hmac.compare_digest(username, configured_username)
+                    and hmac.compare_digest(password, configured_password)):
+                st.session_state.admin_authenticated = True
+                st.rerun()
+            st.error("Invalid username or password.")
+    return False
+
+def get_admin_data(sb):
+    leads = sb.table("leads").select("*").order("created_at", desc=True).execute().data or []
+    lead_ids = [lead["id"] for lead in leads]
+    documents = []
+    if lead_ids:
+        documents = sb.table("documents").select("*").in_("lead_id", lead_ids).order("uploaded_at", desc=True).execute().data or []
+    documents_by_lead = {}
+    for document in documents:
+        documents_by_lead.setdefault(document["lead_id"], []).append(document)
+    return leads, documents_by_lead
+
+def render_admin_dashboard():
+    st.markdown("""
+    <style>
+    .admin-header{padding:20px 0 8px;border-bottom:1px solid #E2E9F1;margin-bottom:24px}
+    .admin-kpi{border:1px solid #E2E9F1;border-radius:12px;padding:16px;background:#fff}
+    .admin-kpi strong{display:block;font-size:1.8rem;color:#071A2F}
+    .admin-kpi span{color:#607085;font-size:.85rem}
+    </style>
+    """, unsafe_allow_html=True)
+    if not admin_login():
+        st.stop()
+
+    sb = get_supabase()
+    try:
+        leads, documents_by_lead = get_admin_data(sb)
+    except Exception as exc:
+        st.error(f"Could not load dashboard data: {exc}")
+        st.stop()
+
+    header_left, header_right = st.columns([4, 1])
+    with header_left:
+        st.markdown('<div class="admin-header"><div class="section-label">Private workspace</div><h1>Client requests</h1><p class="lead">Review requirements, update pipeline state and download submitted documents.</p></div>', unsafe_allow_html=True)
+    with header_right:
+        st.write("")
+        if st.button("Sign out", use_container_width=True):
+            st.session_state.admin_authenticated = False
+            st.rerun()
+
+    total_documents = sum(len(items) for items in documents_by_lead.values())
+    urgent_count = sum(1 for lead in leads if lead.get("priority") == "Urgent")
+    new_count = sum(1 for lead in leads if lead.get("status", "New") == "New")
+    kpis = st.columns(4)
+    for column, value, label in zip(kpis, [len(leads), new_count, urgent_count, total_documents], ["Total leads", "New", "Urgent", "Documents"]):
+        with column:
+            st.markdown(f'<div class="admin-kpi"><strong>{value}</strong><span>{label}</span></div>', unsafe_allow_html=True)
+
+    st.write("")
+    filter_left, filter_middle, filter_right = st.columns([2, 1, 1])
+    with filter_left:
+        search = st.text_input("Search leads", placeholder="Name, email, company or requirements")
+    with filter_middle:
+        status_filter = st.selectbox("Status", ["All"] + STATUS_OPTIONS)
+    with filter_right:
+        priority_filter = st.selectbox("Priority", ["All"] + PRIORITY_OPTIONS)
+
+    search_text = search.strip().lower()
+    filtered_leads = []
+    for lead in leads:
+        searchable = " ".join(str(lead.get(field) or "") for field in ["name", "email", "company", "service", "requirements"]).lower()
+        if search_text and search_text not in searchable:
+            continue
+        if status_filter != "All" and lead.get("status", "New") != status_filter:
+            continue
+        if priority_filter != "All" and lead.get("priority", "Normal") != priority_filter:
+            continue
+        filtered_leads.append(lead)
+
+    st.caption(f"Showing {len(filtered_leads)} of {len(leads)} leads")
+    if not filtered_leads:
+        st.info("No leads match the current filters.")
+        return
+
+    lead_labels = {lead["id"]: f'{lead.get("name", "Unnamed")} · {lead.get("company") or "Individual"} · {lead.get("service", "")}' for lead in filtered_leads}
+    selected_id = st.selectbox("Open lead", list(lead_labels), format_func=lambda lead_id: lead_labels[lead_id])
+    selected = next(lead for lead in filtered_leads if lead["id"] == selected_id)
+    selected_documents = documents_by_lead.get(selected_id, [])
+
+    detail_left, detail_right = st.columns([2, 1], gap="large")
+    with detail_left:
+        st.subheader(selected.get("name", "Unnamed lead"))
+        st.caption(f'{selected.get("email", "")} · {selected.get("company") or "No company provided"}')
+        st.markdown(f'**Service**  \n{selected.get("service", "")}')
+        st.markdown("**Requirements**")
+        st.text_area("Requirements", value=selected.get("requirements", ""), height=220, disabled=True, label_visibility="collapsed")
+        st.caption(f'Lead ID: {selected_id} · Submitted: {selected.get("created_at", "")}' )
+
+    with detail_right:
+        st.subheader("Manage lead")
+        current_status = selected.get("status") or "New"
+        current_priority = selected.get("priority") or "Normal"
+        with st.form(f"update_lead_{selected_id}"):
+            new_status = st.selectbox("Status", STATUS_OPTIONS, index=STATUS_OPTIONS.index(current_status) if current_status in STATUS_OPTIONS else 0)
+            new_priority = st.selectbox("Priority", PRIORITY_OPTIONS, index=PRIORITY_OPTIONS.index(current_priority) if current_priority in PRIORITY_OPTIONS else 1)
+            save = st.form_submit_button("Save changes", use_container_width=True)
+            if save:
+                try:
+                    sb.table("leads").update({"status": new_status, "priority": new_priority}).eq("id", selected_id).execute()
+                    st.success("Lead updated.")
+                    st.rerun()
+                except Exception as exc:
+                    st.error(f"Could not update lead. Apply the priority migration in supabase_schema.sql first. Details: {exc}")
+
+        st.subheader(f"Documents ({len(selected_documents)})")
+        for document in selected_documents:
+            try:
+                file_data = sb.storage.from_(BUCKET).download(document["storage_path"])
+                st.download_button(
+                    f'Download {document["original_name"]}',
+                    data=file_data,
+                    file_name=document["original_name"],
+                    mime=document.get("mime_type") or "application/octet-stream",
+                    key=f'download_{document["id"]}',
+                    use_container_width=True,
+                )
+            except Exception:
+                st.warning(f'Could not download {document["original_name"]}.')
+
+if st.query_params.get("admin") == "1":
+    render_admin_dashboard()
+    st.stop()
 
 # ---------------- CSS ----------------
 st.markdown("""

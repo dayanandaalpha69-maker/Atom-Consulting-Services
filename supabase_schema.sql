@@ -11,8 +11,12 @@ create table if not exists public.leads (
     service text not null,
     requirements text not null,
     status text not null default 'New',
+    priority text not null default 'Normal',
     notification_email text
 );
+
+-- Add the dashboard field to an existing installation without replacing data.
+alter table public.leads add column if not exists priority text not null default 'Normal';
 
 create table if not exists public.documents (
     id uuid primary key,

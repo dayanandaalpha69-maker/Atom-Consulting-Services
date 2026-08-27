@@ -32,6 +32,9 @@ Sources:
 - Unique Lead ID
 - SMTP email notification
 - Client email in Reply-To
+- Password-protected admin dashboard
+- Lead search, status and priority management
+- Secure document downloads from private Storage
 - Secrets kept outside GitHub
 
 ## Setup — Supabase Free
@@ -59,6 +62,15 @@ Supabase recommends storing files outside the database; Storage provides buckets
 
 The Streamlit hosting domain does not need to support SMTP. Streamlit sends the message server-side through the configured SMTP provider.
 
+## Admin dashboard
+
+1. Add `ADMIN_USERNAME` and a long unique `ADMIN_PASSWORD` to Streamlit Cloud Secrets.
+2. Apply `supabase_schema.sql` in Supabase SQL Editor. The `priority` migration is safe to run against an existing `leads` table.
+3. Open `https://atomconsultingservices.streamlit.app/?admin=1`.
+4. Sign in to search every lead, inspect requirements, update status and priority, and download documents from the private `client-documents` bucket.
+
+The admin dashboard uses the server-side Supabase service-role key. Never put that key or the admin password in frontend code or GitHub.
+
 ## Streamlit Cloud Secrets
 
 Copy `.streamlit/secrets.toml.example` into the Streamlit Cloud Secrets panel.
@@ -67,6 +79,8 @@ Example:
 
 ```toml
 CONTACT_TO_EMAIL = "atomconsultingservices@proton.me"
+ADMIN_USERNAME = "admin"
+ADMIN_PASSWORD = "use-a-long-unique-password"
 
 SUPABASE_URL = "https://YOUR_PROJECT.supabase.co"
 SUPABASE_SERVICE_ROLE_KEY = "YOUR_SUPABASE_SERVICE_ROLE_KEY"
