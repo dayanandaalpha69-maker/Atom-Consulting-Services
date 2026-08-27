@@ -1,9 +1,10 @@
 
-import base64
 import html
 import re
+import smtplib
 import uuid
 from datetime import datetime, timezone
+from email.message import EmailMessage
 
 import streamlit as st
 from supabase import create_client, Client
@@ -99,34 +100,28 @@ def create_lead_and_uploads(name, email, company, service, requirements, files):
 
     return lead_id, docs
 
-def send_resend_email(name, email, company, service, requirements, lead_id, docs):
-    api_key = get_secret("RESEND_API_KEY")
-    from_email = get_secret("RESEND_FROM_EMAIL")
-    if not api_key or not from_email:
-        return False, "Resend is not configured. The lead was saved to Supabase."
-
-    # Resend API supports attachments. Keep total email payload comfortably below
-    # its documented attachment ceiling; Supabase remains the system of record.
-    import requests
-
-    attachments = []
-    for doc in docs:
-        attachments.append({
-            "filename": doc["name"],
-            "content": base64.b64encode(doc["data"]).decode("utf-8"),
-        })
+def send_smtp_email(name, email, company, service, requirements, lead_id, docs):
+    smtp_host = get_secret("SMTP_HOST")
+    smtp_port = int(get_secret("SMTP_PORT", 587))
+    smtp_username = get_secret("SMTP_USERNAME")
+    smtp_password = get_secret("SMTP_PASSWORD")
+    from_email = get_secret("SMTP_FROM_EMAIL", smtp_username)
+    smtp_use_ssl = str(get_secret("SMTP_USE_SSL", "false")).lower() == "true"
+    if not smtp_host or not smtp_username or not smtp_password or not from_email:
+        return False, "SMTP is not configured. The lead was saved to Supabase."
 
     escaped_name = html.escape(name)
     escaped_email = html.escape(email)
     escaped_company = html.escape(company) if company else "Not provided"
     escaped_service = html.escape(service)
     escaped_requirements = html.escape(requirements).replace("\r\n", "<br>").replace("\n", "<br>")
-    payload = {
-        "from": from_email,
-        "to": [TO_EMAIL],
-        "reply_to": [email],
-        "subject": f"New Atom Consulting Lead - {service} - {name}",
-        "html": f"""
+    message = EmailMessage()
+    message["From"] = from_email
+    message["To"] = TO_EMAIL
+    message["Reply-To"] = email
+    message["Subject"] = f"New Atom Consulting Lead - {service} - {name}"
+    message.set_content(f"New service request from {name} ({email}). Lead ID: {lead_id}")
+    message.add_alternative(f"""
         <h2>New Atom Consulting Services Request</h2>
         <p><b>Lead ID:</b> {lead_id}</p>
         <p><b>Name:</b> {escaped_name}<br>
@@ -136,20 +131,18 @@ def send_resend_email(name, email, company, service, requirements, lead_id, docs
         <h3>Business / User Requirements</h3>
         <p>{escaped_requirements}</p>
         <p><b>Documents:</b> {len(docs)}</p>
-        """,
-        "attachments": attachments,
-    }
+        """, subtype="html")
+    for doc in docs:
+        message.add_attachment(doc["data"], maintype="application", subtype="octet-stream", filename=doc["name"])
 
     try:
-        r = requests.post(
-            "https://api.resend.com/emails",
-            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-            json=payload,
-            timeout=30,
-        )
-        if r.ok:
-            return True, "Email notification sent successfully."
-        return False, f"Resend returned HTTP {r.status_code}: {r.text[:300]}"
+        smtp_class = smtplib.SMTP_SSL if smtp_use_ssl else smtplib.SMTP
+        with smtp_class(smtp_host, smtp_port, timeout=30) as smtp:
+            if not smtp_use_ssl:
+                smtp.starttls()
+            smtp.login(smtp_username, smtp_password)
+            smtp.send_message(message)
+        return True, "Email notification sent successfully."
     except Exception as exc:
         return False, f"Email notification failed: {exc}"
 
@@ -282,7 +275,7 @@ with right:
                 else:
                     try:
                         lead_id,docs=create_lead_and_uploads(name,email,company,service,requirements,files)
-                        ok,msg=send_resend_email(name,email,company,service,requirements,lead_id,docs)
+                        ok,msg=send_smtp_email(name,email,company,service,requirements,lead_id,docs)
                         st.success(f"Request received. Lead ID: {lead_id}")
                         if ok: st.info(msg)
                         else: st.warning(msg)

@@ -4,12 +4,12 @@ This version replaces local lead/document storage with a free-tier-oriented clou
 
 **Streamlit Community Cloud**
 → **Supabase Free: PostgreSQL + private Storage**
-→ **Resend Free: transactional email**
+→ **SMTP: transactional email**
 → **atomconsultingservices@proton.me**
 
 ## Why this architecture?
 
-Supabase Free currently includes a Postgres database, 500 MB database quota and 1 GB file storage, with a 50 MB maximum file-size setting. Resend Free currently includes 3,000 emails/month and a 100-email/day limit. These quotas are suitable for an early-stage consulting website with modest enquiry volume.
+Supabase Free currently includes a Postgres database, 500 MB database quota and 1 GB file storage, with a 50 MB maximum file-size setting. Email is sent through an authenticated SMTP account, so the app does not depend on the Streamlit domain or Resend.
 
 Sources:
 - Supabase pricing: https://supabase.com/pricing
@@ -30,7 +30,7 @@ Sources:
 - Private Supabase Storage
 - Supabase PostgreSQL lead database
 - Unique Lead ID
-- Resend email notification
+- SMTP email notification
 - Client email in Reply-To
 - Secrets kept outside GitHub
 
@@ -51,15 +51,13 @@ The SQL creates:
 
 Supabase recommends storing files outside the database; Storage provides buckets and access controls.
 
-## Setup — Resend Free
+## Setup — SMTP email
 
-1. Create a free Resend account.
-2. Create an API key.
-3. For initial testing, use the sender/domain allowed by Resend for your account.
-4. For a professional production sender, verify your Atom Consulting Services domain in Resend.
-5. Put the API key in Streamlit Secrets.
+1. Use an SMTP-enabled mailbox for sending notifications. Proton Mail requires a paid plan and a Proton Mail Bridge SMTP connection; alternatively use Gmail, Zoho, Outlook, or another SMTP provider.
+2. Create an app password where your provider supports it. Do not use your normal mailbox password.
+3. Put the SMTP settings in Streamlit Secrets. The recipient remains `atomconsultingservices@proton.me`.
 
-Resend Free currently provides 3,000 emails/month and a 100-email/day limit.
+The Streamlit hosting domain does not need to support SMTP. Streamlit sends the message server-side through the configured SMTP provider.
 
 ## Streamlit Cloud Secrets
 
@@ -74,8 +72,12 @@ SUPABASE_URL = "https://YOUR_PROJECT.supabase.co"
 SUPABASE_SERVICE_ROLE_KEY = "YOUR_SUPABASE_SERVICE_ROLE_KEY"
 SUPABASE_BUCKET = "client-documents"
 
-RESEND_API_KEY = "re_xxxxxxxxxxxxxxxxx"
-RESEND_FROM_EMAIL = "Atom Consulting Services <onboarding@resend.dev>"
+SMTP_HOST = "smtp.example.com"
+SMTP_PORT = 587
+SMTP_USERNAME = "your-sending-email@example.com"
+SMTP_PASSWORD = "your-email-app-password"
+SMTP_FROM_EMAIL = "your-sending-email@example.com"
+SMTP_USE_SSL = false
 ```
 
 Do not commit a real `secrets.toml`.
@@ -133,7 +135,7 @@ Monitor:
 - Supabase database usage
 - Supabase project inactivity/pausing
 - Supabase egress
-- Resend email count
+- SMTP provider sending limits
 
 Supabase Free projects can pause after one week of inactivity.
 
