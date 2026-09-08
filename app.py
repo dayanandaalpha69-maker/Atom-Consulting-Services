@@ -369,16 +369,26 @@ slides=[
 ("02 / TRANSFORMATION","Build the capabilities that move business forward.","AI, digital transformation, operating-model redesign and execution."),
 ("03 / ANALYTICS","Make better decisions with better intelligence.","Decision-ready analytics, KPI systems and performance intelligence.")
 ]
-if "slide" not in st.session_state: st.session_state.slide=0
-s=slides[st.session_state.slide]
-st.markdown(f"""<div class="hero"><div class="hero-grid"><div class="eyebrow">{s[0]}</div><h1>{s[1]}</h1><p>{s[2]}</p>
-<div><a class="cta" href="#contact">Start a conversation →</a><a class="cta secondary" href="#services">Explore services</a></div></div>
-<div class="slide-note">ATOM / {st.session_state.slide+1} — 3</div></div>""",unsafe_allow_html=True)
-_,a,b,_=st.columns([5,1,1,5])
-with a:
-    if st.button("←",use_container_width=True): st.session_state.slide=(st.session_state.slide-1)%3; st.rerun()
-with b:
-    if st.button("→",use_container_width=True): st.session_state.slide=(st.session_state.slide+1)%3; st.rerun()
+@st.fragment(run_every="6s")
+def render_hero():
+    if "slide" not in st.session_state:
+        st.session_state.slide = 0
+    s = slides[st.session_state.slide]
+    st.markdown(f"""<div class="hero"><div class="hero-grid"><div class="eyebrow">{s[0]}</div><h1>{s[1]}</h1><p>{s[2]}</p>
+    <div><a class="cta" href="#contact">Start a conversation →</a><a class="cta secondary" href="#services">Explore services</a></div></div>
+    <div class="slide-note">ATOM / {st.session_state.slide + 1} — 3</div></div>""", unsafe_allow_html=True)
+    _, a, b, _ = st.columns([5, 1, 1, 5])
+    with a:
+        if st.button("←", use_container_width=True):
+            st.session_state.slide = (st.session_state.slide - 1) % len(slides)
+            st.rerun()
+    with b:
+        if st.button("→", use_container_width=True):
+            st.session_state.slide = (st.session_state.slide + 1) % len(slides)
+            st.rerun()
+    st.session_state.slide = (st.session_state.slide + 1) % len(slides)
+
+render_hero()
 
 # Services
 st.markdown("""<div id="services"></div><div class="section-label">What we do</div><h2>Advice that moves from<br>boardroom to business.</h2><p class="lead">Atom Consulting Services helps organisations navigate growth, transformation and technology-led change.</p>""",unsafe_allow_html=True)
