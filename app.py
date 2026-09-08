@@ -322,6 +322,7 @@ if st.query_params.get("admin") == "1":
 st.markdown("""
 <style>
 html,body,[class*="css"]{font-family:'Trebuchet MS',sans-serif;color:#102033;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;scroll-behavior:smooth;scroll-padding-top:90px}
+.st-key-website_honeypot{display:none}
 .stApp{background:#fff}.block-container{max-width:1240px;padding-top:0.5rem;padding-bottom:0}
 section[data-testid="stSidebar"]{display:none}
 header[data-testid="stHeader"]{display:none !important}
@@ -426,7 +427,7 @@ with right:
         requirements=st.text_area("Business / User Requirements *",height=160,max_chars=10000)
         files=st.file_uploader("Upload case study / requirements / supporting documents",type=ALLOWED_TYPES,accept_multiple_files=True)
         captcha_answer=st.text_input(get_captcha_question(), max_chars=3)
-        website=st.text_input("Website", label_visibility="collapsed", max_chars=1)
+        website=st.text_input("Website", key="website_honeypot", label_visibility="collapsed", max_chars=1)
         consent=st.checkbox("I consent to Atom Consulting Services using the submitted information to respond to this enquiry.")
         submitted=st.form_submit_button("Send service request →")
         if submitted:
