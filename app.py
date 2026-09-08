@@ -348,7 +348,7 @@ h2{font-family:'Manrope';color:#071A2F;font-size:clamp(2rem,4vw,3.25rem);line-he
 .trust{background:#F5F8FC;border-radius:24px;padding:28px 32px;margin:72px 0}.trust-stat{font-family:'Manrope';font-size:2rem;font-weight:800;color:#071A2F}.trust-copy{color:#607085;font-size:.88rem}
 .about{background:#071A2F;border-radius:28px;padding:54px;color:white;margin:70px 0}.about h2{color:white}.about .lead{color:#B9CBDD}.about-point{border-top:1px solid rgba(255,255,255,.13);padding:16px 0}.about-point strong{color:white;display:block;margin-bottom:5px}.about-point span{color:#AFC2D5;font-size:.9rem}
 .process-card{padding:24px 0;border-top:1px solid #DCE5EF}.process-number{color:#0D5CFF;font-weight:800;font-size:.8rem}.process-card h3{font-family:'Manrope';margin:8px 0;color:#071A2F}.process-card p{color:#607085;line-height:1.6}
-.contact{background:linear-gradient(120deg,#0D5CFF,#13B8C8);border-radius:28px;padding:54px;color:white;margin:70px 0 35px}.contact h2{color:white}.contact p{color:#E7FAFC}
+.contact{background:linear-gradient(120deg,#0D5CFF,#13B8C8);border-radius:28px;padding:54px;color:white;margin:70px 0 35px}.contact .section-label{color:#000}.contact h2{color:white}.contact p{color:#E7FAFC}
 .footer{border-top:1px solid #E2E9F1;padding:30px 0 45px;color:#718096;font-size:.86rem}.footer strong{color:#071A2F}
 div.stButton>button{border-radius:999px;border:0;background:#0D5CFF;color:white;font-weight:800}
 @media (max-width: 720px){.topbar{align-items:flex-start;flex-direction:column}.topnav{justify-content:flex-start}.hero-grid{padding:48px 28px}.cta{display:inline-flex;align-items:center;justify-content:center;margin:0 10px 12px 0}.slide-note{right:24px;bottom:18px}}
