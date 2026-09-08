@@ -7,3 +7,9 @@ font = "sans serif"
 
 [server]
 headless = true
+enableXsrfProtection = true
+enableCORS = true
+maxUploadSize = 25
+
+[client]
+toolbarMode = "minimal"

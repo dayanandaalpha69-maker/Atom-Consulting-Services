@@ -3,6 +3,7 @@ import html
 import hmac
 import re
 import smtplib
+import time
 import uuid
 from datetime import datetime, timezone
 from email.message import EmailMessage
@@ -32,12 +33,32 @@ MAX_FILES = 5
 MAX_TOTAL_UPLOAD_MB = 25
 ALLOWED_TYPES = ["pdf", "doc", "docx"]
 
+@st.cache_resource
 def get_supabase() -> Client:
     url = get_secret("SUPABASE_URL")
     key = get_secret("SUPABASE_SERVICE_ROLE_KEY")
     if not url or not key:
         raise RuntimeError("Supabase secrets are not configured.")
     return create_client(url, key)
+
+def get_captcha_question():
+    if "captcha_question" not in st.session_state:
+        first = uuid.uuid4().int % 8 + 2
+        second = uuid.uuid4().int % 8 + 1
+        st.session_state.captcha_question = f"What is {first} + {second}?"
+        st.session_state.captcha_answer = str(first + second)
+    return st.session_state.captcha_question
+
+def rotate_captcha():
+    st.session_state.pop("captcha_question", None)
+    st.session_state.pop("captcha_answer", None)
+
+def submission_is_allowed():
+    now = time.monotonic()
+    last_submission = st.session_state.get("last_submission_at", 0)
+    if now - last_submission < 60:
+        return False, "Please wait one minute before sending another request."
+    return True, ""
 
 def safe_filename(name):
     stem = re.sub(r"[^A-Za-z0-9._-]", "_", name)
@@ -300,8 +321,7 @@ if st.query_params.get("admin") == "1":
 # ---------------- CSS ----------------
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap');
-html,body,[class*="css"]{font-family:'DM Sans',sans-serif;color:#102033;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;scroll-behavior:smooth;scroll-padding-top:90px}
+html,body,[class*="css"]{font-family:'Trebuchet MS',sans-serif;color:#102033;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;scroll-behavior:smooth;scroll-padding-top:90px}
 .stApp{background:#fff}.block-container{max-width:1240px;padding-top:0.5rem;padding-bottom:0}
 section[data-testid="stSidebar"]{display:none}
 header[data-testid="stHeader"]{display:none !important}
@@ -399,22 +419,33 @@ with left:
 with right:
     st.markdown("### Contact us")
     with st.form("service_request",clear_on_submit=True):
-        name=st.text_input("Name *")
-        email=st.text_input("Business email *")
-        company=st.text_input("Company / Organisation")
+        name=st.text_input("Name *", max_chars=120)
+        email=st.text_input("Business email *", max_chars=254)
+        company=st.text_input("Company / Organisation", max_chars=200)
         service=st.selectbox("Service required",[x[1] for x in services]+["Other"])
-        requirements=st.text_area("Business / User Requirements *",height=160)
+        requirements=st.text_area("Business / User Requirements *",height=160,max_chars=10000)
         files=st.file_uploader("Upload case study / requirements / supporting documents",type=ALLOWED_TYPES,accept_multiple_files=True)
+        captcha_answer=st.text_input(get_captcha_question(), max_chars=3)
+        website=st.text_input("Website", label_visibility="collapsed", max_chars=1)
         consent=st.checkbox("I consent to Atom Consulting Services using the submitted information to respond to this enquiry.")
         submitted=st.form_submit_button("Send service request →")
         if submitted:
-            if not name or not email or not requirements:
+            allowed, rate_message = submission_is_allowed()
+            if website:
+                st.error("The request could not be completed.")
+            elif not allowed:
+                st.warning(rate_message)
+            elif not name or not email or not requirements:
                 st.warning("Please complete all required fields.")
             elif not consent:
                 st.warning("Please provide consent before submitting.")
             elif not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$",email):
                 st.warning("Please enter a valid email address.")
+            elif not hmac.compare_digest(captcha_answer.strip(), st.session_state.get("captcha_answer", "")):
+                st.error("Please solve the verification question correctly.")
+                rotate_captcha()
             else:
+                st.session_state.last_submission_at = time.monotonic()
                 files=files or []
                 oversized=[f.name for f in files if f.size>MAX_FILE_MB*1024*1024]
                 if oversized:
@@ -427,7 +458,8 @@ with right:
                     try:
                         lead_id,docs=create_lead_and_uploads(name,email,company,service,requirements,files)
                         ok,msg=send_smtp_email(name,email,company,service,requirements,lead_id,docs)
-                        st.success(f"Request received. Lead ID: {lead_id}")
+                        st.success("Request received. We will be in touch shortly.")
+                        rotate_captcha()
                         if ok: st.info(msg)
                         else: st.warning(msg)
                     except Exception:

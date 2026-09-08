@@ -29,7 +29,7 @@ Sources:
 - Maximum 5 files and 25 MB total per request
 - Private Supabase Storage
 - Supabase PostgreSQL lead database
-- Unique Lead ID
+- Unique Lead ID (private admin use only; never shown to visitors)
 - SMTP email notification
 - Client email in Reply-To
 - Password-protected admin dashboard
@@ -129,6 +129,21 @@ git push -u origin main
 ```
 
 Then deploy `app.py` on Streamlit Community Cloud and add the secrets.
+
+## Availability and edge protection
+
+The free Streamlit Community Cloud tier may sleep or pause apps and does not provide a 24/7 uptime SLA. For guaranteed always-on service, deploy the same app on an always-on paid container/VM. The included `.github/workflows/streamlit-keepalive.yml` performs a best-effort scheduled health request, but it is not a guarantee and should not be treated as a replacement for always-on hosting.
+
+Put the public hostname behind a free Cloudflare proxy. Enable **Under Attack Mode** only during an incident, keep the default DDoS protection enabled, and add a WAF custom rule to challenge or block repeated requests to the Streamlit host. Cloudflare protects the edge; it cannot repair an exposed secret or make a sleeping origin continuously available.
+
+Recommended operational controls:
+
+- Keep `SUPABASE_SERVICE_ROLE_KEY`, SMTP credentials and admin credentials only in Streamlit Secrets.
+- Rotate credentials immediately if they appear in Git history or logs.
+- Use a strong unique admin password and restrict the admin URL with a Cloudflare Access policy when possible.
+- Configure Supabase backups, retention and monitoring before handling sensitive client documents.
+
+The contact form includes a lightweight arithmetic CAPTCHA, honeypot field, strict file limits and a one-minute session cooldown. These controls reduce automated submissions but are not a substitute for Cloudflare rate limiting at the edge.
 
 ## Security model
 
